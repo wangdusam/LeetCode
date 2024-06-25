@@ -1,0 +1,5 @@
+google-cloud-storage
+cryptography==2.8
+google-cloud-bigquery
+crcmod
+google-cloud-secret-manager

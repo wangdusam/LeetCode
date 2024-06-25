@@ -1,0 +1,4 @@
+google-cloud-storage
+cryptography==2.8
+crcmod
+google-cloud-secret-manager

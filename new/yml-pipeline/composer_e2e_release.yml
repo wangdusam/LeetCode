@@ -1,0 +1,99 @@
+################################################################################################################################
+# This is a wrapper yml used as a Release Pipeline.. this is using release-deploy-template.yml and release-destroy-template.yml  
+# under azure-pipelines-template ; running all tasks related to deploy/destroy process.
+#################################################################################################################################
+
+# To run pipeline by only using scheduled triggers, you disable PR and continuous integration triggers
+# by specifying pr: none and trigger: none in YAML file.
+
+pr : none
+trigger: none
+
+parameters:
+- name: action
+  displayName: Action
+  type: string
+  default: deploy_scheduler
+  values:
+  - deploy_scheduler
+  - install_composer
+  - replace_dags
+  - destroy_composer
+  - destroy_scheduler
+
+
+pool:
+  name: Azure Pipelines
+  vmImage: 'ubuntu-latest'
+
+
+variables:
+  - template: env-config/common-variables.yml
+    parameters:
+       action: ${{ parameters.action }}
+  - ${{ if eq(variables['Build.SourceBranchName'], 'sbx-compkmsgen2-omni') }}: # only works if this is sandbox branch
+    - group: composer2-cfgen2-hashi-sbx-compkmsgen2-omni
+    - group: cloud-scheduler-cfgen2-hashi-sbx-compkmsgen2-omni
+  - ${{ if eq(variables['Build.SourceBranchName'], 'composer2-scheduler-cfgen2-hashi-npd') }}: # only works if this is nonprod branch
+    - group: composer2-cfgen2-hashi-npd
+    - group: cloud-scheduler-cfgen2-hashi-npd
+  - ${{ if eq(variables['Build.SourceBranchName'], 'composer2-scheduler-cfgen2-hashi-prd') }}: # only works if this is prod branch
+    - group: composer2-cfgen2-hashi-prd
+    - group: cloud-scheduler-cfgen2-hashi-prd
+
+# Stage for different env
+#---------------------------------------------------
+#               Deploy and Destroy 
+#---------------------------------------------------
+stages:
+  - ${{ if eq(parameters.action, 'deploy_scheduler') }}:
+    - template: azure-pipelines-template/release-cs-deploy-template.yml
+      parameters:
+        AIR_ID: $(AIR_ID)
+        GCP_PROJECT_ID: $(GCP_PROJECT_ID)
+        build_pipeline_name: $(composer_cs_build_pipeline)
+        SRC_PATH_TF_CODE: $(SRC_PATH_TF_CODE)
+        TOOL_TF_VERSION: $(TOOL_TF_VERSION)
+        HASHI_ENDPOINT: $(HASHI_ENDPOINT)
+        SECRET_ENV: $(SECRET_ENV)
+        GCP_ROLESET_NAME: $(GCP_ROLESET_NAME)
+        AZ_ROLESET_NAME: $(AZ_ROLESET_NAME)
+
+  - ${{ if or(eq(parameters.action, 'install_composer'),eq(parameters.action, 'replace_dags')) }}:
+    - template: azure-pipelines-template/release-deploy-template.yml
+      parameters:
+        AIR_ID: $(AIR_ID)
+        GCP_PROJECT_ID: $(GCP_PROJECT_ID)
+        build_pipeline_name: $(composer_cs_build_pipeline)
+        SRC_PATH_TF_CODE: $(SRC_PATH_TF_CODE)
+        TOOL_TF_VERSION: $(TOOL_TF_VERSION)
+        HASHI_ENDPOINT: $(HASHI_ENDPOINT)
+        SECRET_ENV: $(SECRET_ENV)
+        GCP_ROLESET_NAME: $(GCP_ROLESET_NAME)
+        AZ_ROLESET_NAME: $(AZ_ROLESET_NAME)
+
+
+  - ${{ if eq(parameters.action, 'destroy_composer') }}:
+    - template: azure-pipelines-template/release-destroy-template.yml
+      parameters:
+        AIR_ID: $(AIR_ID)
+        SRC_PATH_TF_CODE: $(SRC_PATH_TF_CODE)
+        build_pipeline_name: $(composer_cs_build_pipeline)
+        TOOL_TF_VERSION: $(TOOL_TF_VERSION)
+        HASHI_ENDPOINT: $(HASHI_ENDPOINT)
+        SECRET_ENV: $(SECRET_ENV)
+        GCP_ROLESET_NAME: $(GCP_ROLESET_NAME)
+        AZ_ROLESET_NAME: $(AZ_ROLESET_NAME)
+
+
+  - ${{ if eq(parameters.action, 'destroy_scheduler') }}:
+    - template: azure-pipelines-template/release-cs-destroy-template.yml
+      parameters:
+        AIR_ID: $(AIR_ID)
+        SRC_PATH_TF_CODE: $(SRC_PATH_TF_CODE)
+        build_pipeline_name: $(composer_cs_build_pipeline)
+        TOOL_TF_VERSION: $(TOOL_TF_VERSION)
+        HASHI_ENDPOINT: $(HASHI_ENDPOINT)
+        SECRET_ENV: $(SECRET_ENV)
+        GCP_ROLESET_NAME: $(GCP_ROLESET_NAME)
+        AZ_ROLESET_NAME: $(AZ_ROLESET_NAME)

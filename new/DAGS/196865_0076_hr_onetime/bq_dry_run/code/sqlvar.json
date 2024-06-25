@@ -1,0 +1,16 @@
+{
+    "schm_name1":"devarch_poc",
+    "schm_name2":"accentureData",
+    "tbl_name1":"composer1",
+    "tbl_name2":"composer2",
+    "tbl_name3":"kcprocesslog_test",
+    "col_name1":"processedon",
+    "col_name2":"dbnm",
+    "col_name3":"tableNm",
+    "col_name4":"sourceNm",
+    "str1":"jobid",
+    "str2":"2020-01-15",
+    "limit1": "3",
+    "limit2": "4",
+    "partition_filter": "2020-05-19 00:00:00"
+}

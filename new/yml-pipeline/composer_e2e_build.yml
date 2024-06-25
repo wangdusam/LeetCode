@@ -1,0 +1,37 @@
+######################################################################################################################
+# This is a wrapper yml used as a Build Pipeline.. this is using build-template.yml under azure-pipelines-template and 
+# running all tasks related to Build process.
+######################################################################################################################
+
+# To run pipeline by only using scheduled triggers, you disable PR and continuous integration triggers
+# by specifying pr: none and trigger: none in YAML file.
+trigger: none
+pr: none
+
+pool:
+  name: Azure Pipelines
+  vmImage: ubuntu-latest
+
+  
+variables:
+  - template: env-config/common-variables.yml
+  - ${{ if eq(variables['Build.SourceBranchName'], 'sbx-compkmsgen2-omni') }}: # only works if this is sandbox branch
+    - group: composer2-cfgen2-hashi-sbx-compkmsgen2-omni
+    - group: cloud-scheduler-cfgen2-hashi-sbx-compkmsgen2-omni
+  - ${{ if eq(variables['Build.SourceBranchName'], 'composer2-scheduler-cfgen2-hashi-npd') }}: # only works if this is nonprod branch
+    - group: composer2-cfgen2-hashi-npd
+    - group: cloud-scheduler-cfgen2-hashi-npd
+  - ${{ if eq(variables['Build.SourceBranchName'], 'composer2-scheduler-cfgen2-hashi-prd') }}: # only works if this is prod branch
+    - group: composer2-cfgen2-hashi-prd
+    - group: cloud-scheduler-cfgen2-hashi-prd
+
+
+stages:
+  - template: azure-pipelines-template/build-template.yml
+    parameters:
+      AIR_ID: $(AIR_ID)
+      PYTHON_VERSION: $(PYTHON_VERSION)
+      pylint_version: $(pylint_version)
+      GCP_PROJECT_ID: $(GCP_PROJECT_ID)
+      jobname: $(jobname)
+      pylint_min_rank: $(pylint_min_rank)

@@ -1,0 +1,115 @@
+###########################################################################################
+## This YML is being consumed by build pipeline and it is consuming all the tasks from 
+## build-task-templates passing all required parameters .
+## Below 4 stages are mentioned here
+# 1. Compliance_Check - It runs tasks for SAST and HTTP scan
+# 2. Code_Quality_Check - It runs tasks for Pylint check, BQ code analysis and BQ dry run
+# 3. Airflow_Code_Scan - This is to run airflow listDag which checks the DAGs syntactically.
+# 4. Prepare_Publish_artifacts - This is building and publishing artifacts.
+###########################################################################################
+
+parameters:
+- name: AIR_ID
+  default: ''
+- name: PYTHON_VERSION
+  default: ''
+- name: pylint_version
+  default: ''
+- name: GCP_PROJECT_ID
+  default: ''
+- name: jobname
+  default: ''
+- name: pylint_min_rank
+  default: 10
+
+stages:
+- stage: Compliance_Check
+  jobs:
+  - job: Security_asap
+    steps:
+    - template: build-task-templates/Scan-tasks.yml
+      parameters:
+        AIR_ID: ${{ parameters.AIR_ID }}        
+
+- stage: Code_Quality_Check
+  jobs:
+  - job: Pylint_Check
+    steps:
+    - template: build-task-templates/pylint-check.yml
+      parameters:
+        PYTHON_VERSION: ${{ parameters.PYTHON_VERSION }}
+        pylint_version: ${{ parameters.pylint_version }}
+        pylint_min_rank: ${{ parameters.pylint_min_rank }}
+  - job: BQ_code_analysis
+    steps:
+    - template: build-task-templates/BQ-code-analysis.yml
+  - job: BQ_dry_run
+    steps:
+    - template: build-task-templates/BQ-dry-run.yml
+
+- stage: Airflow_Code_Scan
+  jobs:
+  - job: Airflow_listDag
+    steps:
+    - template: build-task-templates/airflow-listDag.yml
+      parameters:
+        GCP_PROJECT_ID: ${{ parameters.GCP_PROJECT_ID }}
+        jobname: ${{ parameters.jobname }}
+        PYTHON_VERSION: ${{ parameters.PYTHON_VERSION }}
+
+- stage: Prepare_Publish_artifacts
+  jobs:
+  - job: Prepare_Publish_artifacts
+    steps:
+    - task: Bash@3
+      displayName: 'Prepare DAGs'
+      inputs:
+        targetType: 'inline'
+        script: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/dags
+          rm -rf $(Build.SourcesDirectory)/DAGS/dryrun
+          rm -rf $(Build.SourcesDirectory)/DAGS/memcal.txt
+          
+          job_name=`echo ${{ parameters.jobname }} | tr '[:lower:]' '[:upper:]'`
+          echo "Preparing artifacts for job :: --> $job_name"
+          
+          if [[ $job_name == "ALL" ]]
+          then
+          ### copying All dags into single folder if jobname is all
+          cp -r $(Build.SourcesDirectory)/DAGS/* $(Build.ArtifactStagingDirectory)/dags/
+          cp -r $(Build.SourcesDirectory)/terraform_v2/tf_composer_code/DestroyDag/* $(Build.ArtifactStagingDirectory)/dags/
+          cd $(Build.ArtifactStagingDirectory)/dags/
+          rm -rf $(Build.ArtifactStagingDirectory)/dags/python
+          else
+          ### copying single job in case of specific job
+          cp -r $(Build.SourcesDirectory)/DAGS/${{ parameters.jobname }} $(Build.ArtifactStagingDirectory)/dags/
+          cp -r $(Build.SourcesDirectory)/DAGS/common_modules $(Build.ArtifactStagingDirectory)/dags/
+          cp -r $(Build.SourcesDirectory)/DAGS/conf_files $(Build.ArtifactStagingDirectory)/dags/
+          cp -r $(Build.SourcesDirectory)/terraform_v2/tf_composer_code/DestroyDag/* $(Build.ArtifactStagingDirectory)/dags/
+            if [ -d "$(Build.SourcesDirectory)/DAGS/ddl" ]; then
+              cp -r $(Build.SourcesDirectory)/DAGS/ddl $(Build.ArtifactStagingDirectory)/dags/
+            fi
+          fi
+    - template: build-task-templates/build-archive.yml
+      parameters:
+        taskName: 'Archive dags'
+        archiveFolder: '$(Build.ArtifactStagingDirectory)/dags/'
+        archiveFileName: '$(Build.ArtifactStagingDirectory)/outputdags/$(Build.BuildId).zip'
+
+    - template: build-task-templates/build-publish.yml
+      parameters:
+        taskName: 'Publish dags'
+        pathToPublish: '$(Build.ArtifactStagingDirectory)/outputdags'
+        artifactName: 'bq_dag'
+
+    - template: build-task-templates/build-archive.yml
+      parameters:
+        taskName: 'Archive tf-code'
+        archiveFolder: 'terraform_v2'
+        archiveFileName: '$(Build.ArtifactStagingDirectory)/outputtfcode/$(Build.BuildId).zip'
+        
+    - template: build-task-templates/build-publish.yml
+      parameters:
+        taskName: 'Publish tf-code'
+        pathToPublish: '$(Build.ArtifactStagingDirectory)/outputtfcode'
+        artifactName: 'terraform_code'

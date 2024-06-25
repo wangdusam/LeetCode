@@ -1,0 +1,48 @@
+##################################################################################################
+# This file is a template for variables being used inside pipeline independent of the environment
+##################################################################################################
+parameters:
+- name: action
+  default: ''
+
+variables:
+  ########### Module source versions ##############
+  TF_CF_MODULE_VERSION: '2.0.3'
+  TF_CS_MODULE_VERSION: '2.0.0'
+  TF_COMPOSER_MODULE_VERSION: '1.1.5'
+  TF_PUBSUBMODULE_VERSION: '2.0.0'
+  TF_STORAGEMODULE_VERSION: '2.1.1'
+  TF_STORAGEFILEUPLOADMODULE_VERSION: '1.1.0'
+  TF_SM_MODULE_VERSION: '1.2.0'
+  TOOL_TF_VERSION: '1.2.9'
+  
+  #--------------------------------------------------------
+  #           Below variables DO NOT require a change     #
+  #--------------------------------------------------------
+  action: ${{ parameters.action }}
+  comm_mod_path: '$(System.ArtifactsDirectory)/bq_dag/dags/common_modules'
+  conf_file_path: '$(System.ArtifactsDirectory)/bq_dag/dags/conf_files'
+  conf_files_path: '$(System.ArtifactsDirectory)/bq_dag/dags/conf_files'
+  dag_path: '$(System.ArtifactsDirectory)/bq_dag'
+  ddl_path: '$(System.ArtifactsDirectory)/bq_dag/dags/ddl'
+  destroy_dag_path: '$(SRC_PATH_TF_CODE)/tf_composer_code/DestroyDag'
+  DESTROY_ENTRYPOINT: 'call_destroy_azure'
+  DESTROY_FUNCTION_NAME: 'destroy-invocation'
+  GCP_BUCKET_NAME: 'destroy-function-bucket'
+  GCP_BUCKET_NAME_TRIGGER: 'trigger-bucket'
+  GCP_PROJECT_CREDENTIAL_FILE_PATH: "/home/vsts/work/1/s/D:/ref/gcp/gcpLogin.json"
+  single_dag_path: '$(System.ArtifactsDirectory)/bq_dag/dags/$(jobname)'
+  single_job_path: '$(System.ArtifactsDirectory)/bq_dag/dags/$(jobname)'
+  SRC_PATH_CODE: '$(System.DefaultWorkingDirectory)/code'
+  SRC_PATH_TF_CODE: '$(System.DefaultWorkingDirectory)/terraform'
+  TF_CF_MODULE_SOURCE: 'acnciotfregistry.accenture.com/accenture-cio/functiongen2/google'
+  TF_CS_MODULE_SOURCE: 'acnciotfregistry.accenture.com/accenture-cio/cloudscheduler/google'
+  TF_MODULE_SOURCE: 'acnciotfregistry.accenture.com/accenture-cio/composer2/google'
+  TOOL_TF_PIPELINE_NAME: '$(Build.DefinitionName)'
+  TOOL_PATH: '$(System.DefaultWorkingDirectory)/tools'
+  TOOL_TF_RELEASE_ID: '$(Build.BuildId)'
+  TOPIC_NAME: 'destroy-topic'
+  TRIGGER_FUNCTION_ENTRYPOINT: 'call_composer_create_stage'
+  TRIGGER_FUNCTION_NAME: 'trigger-composer-create'
+  TRIGGER_SUBSCRIBER_NAME: 'trigger_subscriber'
+  TRIGGER_TOPIC_NAME: 'call_composer'
